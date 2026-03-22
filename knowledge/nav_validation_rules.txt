@@ -1,0 +1,10 @@
+NAV validation ensures that the Net Asset Value of a fund reflects accurate valuation of securities and liabilities.
+
+Key NAV validation checks include:
+
+1. Security prices must be sourced from approved pricing vendors.
+2. Price variance above tolerance levels must trigger investigation.
+3. Income accruals must align with coupon schedules and dividend declarations.
+4. Expense accruals must follow management agreements and contractual fee rates.
+5. Distribution accruals should not exceed available income.
+6. Position quantities must reconcile with custody records.
