@@ -121,7 +121,33 @@ workflow = investigation_workflow()
 # LLMOps → Enterprise LLM
 # -----------------------------
 
-analysis = route_llm(prompt)
+# -----------------------------
+# LLMOps → Enterprise LLM
+# -----------------------------
+
+try:
+    analysis = route_llm(prompt)
+
+except Exception as e:
+
+    print("Azure OpenAI not configured. Using fallback investigation logic.")
+
+    analysis = f"""
+NAV Investigation Summary
+
+Detected breaks:
+{breaks}
+
+Suggested investigation steps:
+
+- Verify security price movements
+- Review income accrual calculations
+- Validate expense accrual entries
+- Confirm distribution adjustments
+
+Recommended control:
+Implement tolerance checks for pricing and accrual validation.
+"""
 
 
 # -----------------------------
@@ -135,7 +161,11 @@ Summary:
 {analysis}
 """
 
-final_analysis = route_llm(reflection_prompt)
+try:
+    final_analysis = route_llm(reflection_prompt)
+
+except Exception:
+    final_analysis = analysis
 
 
 # -----------------------------
