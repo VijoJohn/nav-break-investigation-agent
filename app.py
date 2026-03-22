@@ -4,13 +4,18 @@ import json
 from llmops.llm_router import route_llm
 from llmops.evaluation import evaluate_investigation
 
+from rag.embedding_model import embed_text
+from rag.vector_store import store_vector, search_vectors
+
+from orchestration.agent_workflow import investigation_workflow
+
 
 print("\nAGENTIC AI – NAV BREAK INVESTIGATION PROTOTYPE\n")
 
 
-# -----------------------------------------
-# Load NAV datasets (NAV mechanics)
-# -----------------------------------------
+# -----------------------------
+# Load NAV mechanics datasets
+# -----------------------------
 
 positions = pd.read_csv("data/positions.csv")
 prices = pd.read_csv("data/prices.csv")
@@ -19,13 +24,12 @@ expenses = pd.read_csv("data/expense_accruals.csv")
 distributions = pd.read_csv("data/distributions.csv")
 
 
-# -----------------------------------------
-# Break Detection (Control Agents)
-# -----------------------------------------
+# -----------------------------
+# Break Detection (Control Layer)
+# -----------------------------
 
 breaks = []
 
-# Price variance check
 for _, row in prices.iterrows():
 
     change = abs(row["price_current"] - row["price_previous"]) / row["price_previous"]
@@ -34,46 +38,57 @@ for _, row in prices.iterrows():
         breaks.append(f"Price variance detected for {row['security']}")
 
 
-# Income accrual validation
 for _, row in income.iterrows():
 
     if row["recorded_income"] > row["expected_income"]:
         breaks.append(f"Income accrual mismatch for {row['security']}")
 
 
-# Expense accrual validation
 for _, row in expenses.iterrows():
 
     if row["recorded_expense"] > row["expected_expense"]:
         breaks.append(f"Expense accrual variance for {row['expense_type']}")
 
 
-# Distribution validation
 for _, row in distributions.iterrows():
 
     if row["recorded_distribution"] > row["expected_distribution"]:
         breaks.append(f"Distribution variance detected for {row['fund']}")
 
 
-# -----------------------------------------
-# Retrieve RAG Knowledge
-# -----------------------------------------
+# -----------------------------
+# Load Knowledge (RAG Layer)
+# -----------------------------
 
 rules = open("knowledge/nav_validation_rules.txt").read()
 playbook = open("knowledge/investigation_playbooks.txt").read()
 
 
-# -----------------------------------------
-# Retrieve Agentic Memory
-# -----------------------------------------
+# Convert to embeddings
+rules_vector = embed_text(rules)
+playbook_vector = embed_text(playbook)
+
+
+# Store vectors
+store_vector("rules", rules_vector)
+store_vector("playbook", playbook_vector)
+
+
+# Retrieve relevant context
+retrieved_context = search_vectors(embed_text("NAV break investigation"))
+
+
+# -----------------------------
+# Load Agentic Memory
+# -----------------------------
 
 with open("memory/nav_break_memory.json") as f:
     memory = json.load(f)
 
 
-# -----------------------------------------
+# -----------------------------
 # Investigation Prompt
-# -----------------------------------------
+# -----------------------------
 
 prompt = f"""
 You are assisting a fund accounting team investigating NAV breaks.
@@ -81,11 +96,8 @@ You are assisting a fund accounting team investigating NAV breaks.
 Detected breaks:
 {breaks}
 
-NAV validation rules:
-{rules}
-
-Investigation playbook:
-{playbook}
+Validation rules:
+{retrieved_context}
 
 Historical break patterns:
 {memory}
@@ -98,40 +110,44 @@ Provide a short investigation summary explaining:
 """
 
 
-# -----------------------------------------
-# LLMOps Router → Enterprise LLM
-# -----------------------------------------
+# -----------------------------
+# Agent Workflow
+# -----------------------------
+
+workflow = investigation_workflow()
+
+
+# -----------------------------
+# LLMOps → Enterprise LLM
+# -----------------------------
 
 analysis = route_llm(prompt)
 
 
-# -----------------------------------------
+# -----------------------------
 # Reflection Agent
-# -----------------------------------------
+# -----------------------------
 
 reflection_prompt = f"""
-Review the following NAV break investigation summary.
+Review the NAV break investigation summary and refine the reasoning.
 
-Ensure the explanation is clear, accurate, and aligned with fund accounting controls.
-
-Investigation summary:
+Summary:
 {analysis}
 """
 
 final_analysis = route_llm(reflection_prompt)
 
 
-# -----------------------------------------
+# -----------------------------
 # LLMOps Evaluation
-# -----------------------------------------
+# -----------------------------
 
 evaluate_investigation(final_analysis)
 
 
-# -----------------------------------------
-# Final Output
-# -----------------------------------------
+# -----------------------------
+# Output
+# -----------------------------
 
 print("\nNAV BREAK INVESTIGATION SUMMARY\n")
-
 print(final_analysis)
