@@ -1,0 +1,16 @@
+[
+  {
+    "break_type": "price_variance",
+    "security": "XYZ Equity",
+    "root_cause": "Stale pricing vendor feed",
+    "resolution": "Refresh vendor pricing and recalculate NAV",
+    "recommended_control": "Add automated price tolerance validation"
+  },
+  {
+    "break_type": "income_accrual_mismatch",
+    "security": "US Treasury Bond",
+    "root_cause": "Coupon accrual calculated using incorrect position size",
+    "resolution": "Recalculate income accrual using correct position",
+    "recommended_control": "Validate coupon accruals against position records"
+  }
+]
