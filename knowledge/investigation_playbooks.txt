@@ -1,0 +1,26 @@
+NAV Break Investigation Playbook
+
+Common drivers of NAV discrepancies include:
+
+1. Price variance
+   Security prices may differ from prior day pricing due to market movement or stale vendor feeds.
+
+2. Income accrual mismatch
+   Income accruals may exceed expected values if coupon calculations or dividend entitlements are incorrect.
+
+3. Expense accrual variance
+   Expense accruals may differ from expected calculations due to incorrect fee rates or NAV base values.
+
+4. Distribution accrual discrepancy
+   Distribution accruals may exceed available income if declaration calculations are incorrect.
+
+5. Position quantity mismatch
+   Differences between custody positions and accounting records may cause incorrect valuation.
+
+Investigation Steps
+
+1. Verify security pricing sources.
+2. Recalculate accruals using contractual fee or coupon rates.
+3. Compare recorded values with expected calculations.
+4. Review historical investigations for similar patterns.
+5. Escalate unresolved breaks to fund accounting oversight teams.
