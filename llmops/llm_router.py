@@ -2,15 +2,34 @@ import logging
 from llm.azure_openai_client import run_llm
 
 
-logging.basicConfig(level=logging.INFO)
+# ---------------------------------------
+# LLMOps Configuration
+# ---------------------------------------
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - LLMOps - %(levelname)s - %(message)s"
+)
+
+
+# ---------------------------------------
+# Router Function
+# ---------------------------------------
 
 def route_llm(prompt):
 
-    logging.info("LLMOps Router: sending prompt to enterprise model")
+    try:
 
-    response = run_llm(prompt)
+        logging.info("Routing request to enterprise LLM (Azure OpenAI)")
 
-    logging.info("LLMOps Router: response received")
+        response = run_llm(prompt)
 
-    return response
+        logging.info("LLM response received successfully")
+
+        return response
+
+    except Exception as e:
+
+        logging.error("LLM call failed")
+
+        return f"LLM investigation failed due to: {str(e)}"
