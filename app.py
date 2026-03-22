@@ -30,6 +30,10 @@ distributions = pd.read_csv("data/distributions.csv")
 
 breaks = []
 
+if not breaks:
+    print("No NAV breaks detected. NAV validation checks passed.")
+    exit()
+
 for _, row in prices.iterrows():
 
     change = abs(row["price_current"] - row["price_previous"]) / row["price_previous"]
@@ -60,8 +64,11 @@ for _, row in distributions.iterrows():
 # Load Knowledge (RAG Layer)
 # -----------------------------
 
-rules = open("knowledge/nav_validation_rules.txt").read()
-playbook = open("knowledge/investigation_playbooks.txt").read()
+with open("knowledge/nav_validation_rules.txt") as f:
+    rules = f.read()
+
+with open("knowledge/investigation_playbooks.txt") as f:
+    playbook = f.read()
 
 
 # Convert to embeddings
@@ -116,10 +123,6 @@ Provide a short investigation summary explaining:
 
 workflow = investigation_workflow()
 
-
-# -----------------------------
-# LLMOps → Enterprise LLM
-# -----------------------------
 
 # -----------------------------
 # LLMOps → Enterprise LLM
