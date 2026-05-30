@@ -2,9 +2,9 @@ NAV validation ensures that the Net Asset Value of a fund reflects accurate valu
 
 Key NAV validation checks include:
 
-1. Security prices must be sourced from approved pricing vendors.
-2. Price variance above tolerance levels must trigger investigation.
-3. Income accruals must align with coupon schedules and dividend declarations.
-4. Expense accruals must follow management agreements and contractual fee rates.
-5. Distribution accruals should not exceed available income.
-6. Position quantities must reconcile with custody records.
+[R1] Security prices must be sourced from approved pricing vendors.
+[R2] Price variance above tolerance levels must trigger investigation. A day-over-day price move beyond the agreed tolerance is treated as a price variance break.
+[R3] Income accruals must align with coupon schedules and dividend declarations. Recorded income exceeding expected income indicates an income accrual mismatch.
+[R4] Expense accruals must follow management agreements and contractual fee rates. Recorded expense exceeding the expected fee is an expense accrual variance.
+[R5] Distribution accruals should not exceed available income. A recorded distribution above the expected distribution is a distribution accrual discrepancy.
+[R6] Position quantities must reconcile with custody records. Differences between accounting quantities and custody records are a position quantity mismatch.

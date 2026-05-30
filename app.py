@@ -1,186 +1,58 @@
-import pandas as pd
-import json
+"""NAV Break Investigation — demo entry point.
 
-from llmops.llm_router import route_llm
-from llmops.evaluation import evaluate_investigation
-
-from rag.embedding_model import embed_text
-from rag.vector_store import store_vector, search_vectors
-
-from orchestration.agent_workflow import investigation_workflow
-
-
-print("\nAGENTIC AI – NAV BREAK INVESTIGATION PROTOTYPE\n")
-
-
-# -----------------------------
-# Load NAV mechanics datasets
-# -----------------------------
-
-positions = pd.read_csv("data/positions.csv")
-prices = pd.read_csv("data/prices.csv")
-income = pd.read_csv("data/income_accruals.csv")
-expenses = pd.read_csv("data/expense_accruals.csv")
-distributions = pd.read_csv("data/distributions.csv")
-
-
-# -----------------------------
-# Break Detection (Control Layer)
-# -----------------------------
-
-breaks = []
-
-if not breaks:
-    print("No NAV breaks detected. NAV validation checks passed.")
-    exit()
-
-for _, row in prices.iterrows():
-
-    change = abs(row["price_current"] - row["price_previous"]) / row["price_previous"]
-
-    if change > 0.10:
-        breaks.append(f"Price variance detected for {row['security']}")
-
-
-for _, row in income.iterrows():
-
-    if row["recorded_income"] > row["expected_income"]:
-        breaks.append(f"Income accrual mismatch for {row['security']}")
-
-
-for _, row in expenses.iterrows():
-
-    if row["recorded_expense"] > row["expected_expense"]:
-        breaks.append(f"Expense accrual variance for {row['expense_type']}")
-
-
-for _, row in distributions.iterrows():
-
-    if row["recorded_distribution"] > row["expected_distribution"]:
-        breaks.append(f"Distribution variance detected for {row['fund']}")
-
-
-# -----------------------------
-# Load Knowledge (RAG Layer)
-# -----------------------------
-
-with open("knowledge/nav_validation_rules.txt") as f:
-    rules = f.read()
-
-with open("knowledge/investigation_playbooks.txt") as f:
-    playbook = f.read()
-
-
-# Convert to embeddings
-rules_vector = embed_text(rules)
-playbook_vector = embed_text(playbook)
-
-
-# Store vectors
-store_vector("rules", rules_vector)
-store_vector("playbook", playbook_vector)
-
-
-# Retrieve relevant context
-retrieved_context = search_vectors(embed_text("NAV break investigation"))
-
-
-# -----------------------------
-# Load Agentic Memory
-# -----------------------------
-
-with open("memory/nav_break_memory.json") as f:
-    memory = json.load(f)
-
-
-# -----------------------------
-# Investigation Prompt
-# -----------------------------
-
-prompt = f"""
-You are assisting a fund accounting team investigating NAV breaks.
-
-Detected breaks:
-{breaks}
-
-Validation rules:
-{retrieved_context}
-
-Historical break patterns:
-{memory}
-
-Provide a short investigation summary explaining:
-
-1. Possible root causes
-2. Suggested investigation steps
-3. Recommended controls
+Detect NAV breaks from the sample datasets, then run each break through the
+wired LangGraph investigation agent (chunked RAG retrieval -> classify & cite
+-> reflect). Runs end to end with or without an Azure OpenAI deployment: with
+a key it uses the LLM; without one it uses the transparent offline fallback.
 """
 
+import os
 
-# -----------------------------
-# Agent Workflow
-# -----------------------------
+from dotenv import load_dotenv
 
-workflow = investigation_workflow()
+from controls.break_detection import detect_breaks
+from llm.azure_openai_client import is_configured
+from orchestration.agent_workflow import investigate
 
-
-# -----------------------------
-# LLMOps → Enterprise LLM
-# -----------------------------
-
-try:
-    analysis = route_llm(prompt)
-
-except Exception as e:
-
-    print("Azure OpenAI not configured. Using fallback investigation logic.")
-
-    analysis = f"""
-NAV Investigation Summary
-
-Detected breaks:
-{breaks}
-
-Suggested investigation steps:
-
-- Verify security price movements
-- Review income accrual calculations
-- Validate expense accrual entries
-- Confirm distribution adjustments
-
-Recommended control:
-Implement tolerance checks for pricing and accrual validation.
-"""
+load_dotenv()
 
 
-# -----------------------------
-# Reflection Agent
-# -----------------------------
+def main():
+    print("\nAGENTIC AI - NAV BREAK INVESTIGATION PROTOTYPE\n")
 
-reflection_prompt = f"""
-Review the NAV break investigation summary and refine the reasoning.
+    mode = "Azure OpenAI" if is_configured() else "offline fallback"
+    print(f"LLM mode: {mode}\n")
 
-Summary:
-{analysis}
-"""
+    breaks = detect_breaks()
 
-try:
-    final_analysis = route_llm(reflection_prompt)
+    if not breaks:
+        print("No NAV breaks detected. NAV validation checks passed.")
+        return
 
-except Exception:
-    final_analysis = analysis
+    print(f"Detected {len(breaks)} NAV break(s).\n")
+
+    for i, brk in enumerate(breaks, start=1):
+        result = investigate(brk["observation"])
+
+        print("=" * 70)
+        print(f"BREAK {i}: {brk['subject']}")
+        print(f"  Detected category : {brk['category']}")
+        print(f"  Agent category    : {result['category']}")
+        print(f"  Cited rules       : {', '.join(result['cited_rules']) or '-'}")
+        print(f"  Root cause        : {result['root_cause']}")
+        print(f"  Recommended control: {result['recommended_control']}")
+        if result["investigation_steps"]:
+            print("  Investigation steps:")
+            for step in result["investigation_steps"]:
+                print(f"    - {step}")
+        print(f"  Summary           : {result['summary']}")
+        print(
+            f"  (agent backend: {result['backend']}, "
+            f"retrieval: {result['retrieval_backend']})"
+        )
+
+    print("=" * 70)
 
 
-# -----------------------------
-# LLMOps Evaluation
-# -----------------------------
-
-evaluate_investigation(final_analysis)
-
-
-# -----------------------------
-# Output
-# -----------------------------
-
-print("\nNAV BREAK INVESTIGATION SUMMARY\n")
-print(final_analysis)
+if __name__ == "__main__":
+    main()

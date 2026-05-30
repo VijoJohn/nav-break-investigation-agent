@@ -1,35 +1,31 @@
+"""LLMOps routing layer.
+
+Wraps the Azure OpenAI client with logging and a single choke point for model
+routing. Passing kwargs through (deployment, temperature, json_mode, system)
+lets the eval harness route the same prompt to different deployments to compare
+models. Re-raises LLMUnavailable so callers can fall back deterministically.
+"""
+
 import logging
-from llm.azure_openai_client import run_llm
 
-
-# ---------------------------------------
-# LLMOps Configuration
-# ---------------------------------------
+from llm.azure_openai_client import run_llm, LLMUnavailable
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - LLMOps - %(levelname)s - %(message)s"
+    format="%(asctime)s - LLMOps - %(levelname)s - %(message)s",
 )
 
+logger = logging.getLogger("llmops.router")
 
-# ---------------------------------------
-# Router Function
-# ---------------------------------------
 
-def route_llm(prompt):
-
+def route_llm(prompt, **kwargs):
+    """Route a prompt to the enterprise LLM. Raises LLMUnavailable on failure."""
+    deployment = kwargs.get("deployment") or "default"
     try:
-
-        logging.info("Routing request to enterprise LLM (Azure OpenAI)")
-
-        response = run_llm(prompt)
-
-        logging.info("LLM response received successfully")
-
+        logger.info("Routing request to Azure OpenAI (deployment=%s)", deployment)
+        response = run_llm(prompt, **kwargs)
+        logger.info("LLM response received (%d chars)", len(response or ""))
         return response
-
-    except Exception as e:
-
-        logging.error("LLM call failed")
-
-        return f"LLM investigation failed due to: {str(e)}"
+    except LLMUnavailable:
+        logger.warning("LLM unavailable for deployment=%s", deployment)
+        raise
